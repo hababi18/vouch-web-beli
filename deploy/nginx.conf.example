@@ -1,0 +1,47 @@
+# Example Nginx site config for the Vouch & Social Proof Hub.
+#
+# This is what makes "two separate repos" feel like one site to visitors:
+# Nginx serves the built frontend directly, and forwards anything under
+# /api/ and /uploads/ to the API process (running via PM2 on 127.0.0.1:4000).
+# Same domain, same origin — the frontend's relative fetch("/api/...") calls
+# just work, no CORS configuration needed in production.
+#
+# Setup on the VPS:
+#   sudo cp nginx.conf.example /etc/nginx/sites-available/vouch
+#   sudo nano /etc/nginx/sites-available/vouch   # edit server_name + root
+#   sudo ln -s /etc/nginx/sites-available/vouch /etc/nginx/sites-enabled/
+#   sudo nginx -t && sudo systemctl reload nginx
+#
+# Add HTTPS afterwards with: sudo certbot --nginx -d your-domain.com
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name your-domain.com;
+
+    # Path to the WEB repo's build output (npm run build -> dist/)
+    root /var/www/vouch-web/dist;
+    index index.html;
+
+    # Uploaded media / requests can be sizeable — raise the default limit
+    client_max_body_size 30M;
+
+    location / {
+        try_files $uri /index.html;
+    }
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:4000/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /uploads/ {
+        proxy_pass http://127.0.0.1:4000/uploads/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+    }
+}
