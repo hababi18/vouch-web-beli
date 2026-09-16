@@ -35,9 +35,11 @@ export const EmojiReactions = ({ reactions, myReactions, onToggle }: EmojiReacti
 
   const getCount = (emoji: ReactionEmoji): number => reactions[emoji] ?? 0;
 
-  const visibleEmojis = REACTION_EMOJIS.filter((emoji) => getCount(emoji) > 0).sort(
-    (a, b) => getCount(b) - getCount(a),
-  );
+  // Include any custom emoji an admin has boosted, not just the default set.
+  const allEmojis = Array.from(new Set([...REACTION_EMOJIS, ...Object.keys(reactions)]));
+  const visibleEmojis = allEmojis
+    .filter((emoji) => getCount(emoji) > 0)
+    .sort((a, b) => getCount(b) - getCount(a));
 
   return (
     <div ref={containerRef} className="relative px-4 pb-3 pt-1">

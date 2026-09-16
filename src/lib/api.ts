@@ -71,6 +71,7 @@ export interface RawVouch {
   pinned: boolean;
   reactions: Record<string, number>;
   myReactions: string[];
+  reactionBoosts: Record<string, number>;
 }
 
 export const mapRawVouch = (raw: RawVouch): VouchItem => ({
@@ -90,6 +91,7 @@ export const mapRawVouch = (raw: RawVouch): VouchItem => ({
   pinned: raw.pinned,
   reactions: raw.reactions,
   myReactions: raw.myReactions as VouchItem['myReactions'],
+  reactionBoosts: raw.reactionBoosts,
 });
 
 export const api = {

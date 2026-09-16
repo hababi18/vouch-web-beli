@@ -19,6 +19,7 @@ import {
   Loader2,
   Lock,
   Calendar,
+  Smile,
 } from 'lucide-react';
 import { useVouchStore } from '../store/vouchStore';
 import { api, ApiError, getAuthToken, resolveMediaUrl, setAuthToken } from '../lib/api';
@@ -38,6 +39,11 @@ const CATEGORIES: Exclude<VouchCategory, 'Todos'>[] = [
 
 type UploadMode = 'device' | 'path';
 
+interface ReactionBoostRow {
+  emoji: string;
+  count: number;
+}
+
 interface FormState {
   mediaType: 'image' | 'video';
   uploadMode: UploadMode;
@@ -50,6 +56,8 @@ interface FormState {
   pinned: boolean;
   /** YYYY-MM-DD, matching an <input type="date">. Empty = use the current date. */
   publishDate: string;
+  /** Fake/starting reaction counts the admin sets, incl. custom emojis. */
+  reactionBoosts: ReactionBoostRow[];
 }
 
 const emptyForm: FormState = {
@@ -63,7 +71,18 @@ const emptyForm: FormState = {
   category: 'Envíos',
   pinned: false,
   publishDate: '',
+  reactionBoosts: [],
 };
+
+const reactionBoostsToRecord = (rows: ReactionBoostRow[]): Record<string, number> =>
+  Object.fromEntries(
+    rows
+      .map((r) => [r.emoji.trim(), r.count] as const)
+      .filter(([emoji, count]) => emoji.length > 0 && count > 0),
+  );
+
+const reactionBoostsFromRecord = (record: Record<string, number>): ReactionBoostRow[] =>
+  Object.entries(record).map(([emoji, count]) => ({ emoji, count }));
 
 const toDateInputValue = (isoString: string): string => isoString.slice(0, 10);
 
@@ -200,6 +219,8 @@ export const AdminModal = ({ open, onClose }: AdminModalProps) => {
         })()
       : undefined;
 
+    const reactionBoosts = reactionBoostsToRecord(form.reactionBoosts);
+
     try {
       if (editingId) {
         await updateVouch(editingId, {
@@ -210,6 +231,7 @@ export const AdminModal = ({ open, onClose }: AdminModalProps) => {
           category: form.category,
           pinned: form.pinned,
           createdAt,
+          reactionBoosts,
         });
       } else {
         await addVouch({
@@ -222,6 +244,7 @@ export const AdminModal = ({ open, onClose }: AdminModalProps) => {
           published: true,
           pinned: form.pinned,
           createdAt,
+          reactionBoosts,
         });
       }
       resetForm();
@@ -248,6 +271,7 @@ export const AdminModal = ({ open, onClose }: AdminModalProps) => {
       category: v.category === 'Todos' ? 'Envíos' : v.category,
       pinned: v.pinned,
       publishDate: toDateInputValue(v.createdAt),
+      reactionBoosts: reactionBoostsFromRecord(v.reactionBoosts),
     });
   };
 
@@ -471,6 +495,76 @@ export const AdminModal = ({ open, onClose }: AdminModalProps) => {
                     />
                     <p className="mt-1 text-[11px] text-slate-400/70">
                       Déjalo vacío para usar la fecha y hora actuales.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="mb-1 flex items-center gap-1.5 text-xs font-medium text-slate-400">
+                      <Smile className="h-3.5 w-3.5" />
+                      Reacciones falsas / iniciales (opcional)
+                    </label>
+                    <div className="flex flex-col gap-2">
+                      {form.reactionBoosts.map((row, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <input
+                            value={row.emoji}
+                            onChange={(e) =>
+                              setForm((f) => ({
+                                ...f,
+                                reactionBoosts: f.reactionBoosts.map((r, ri) =>
+                                  ri === i ? { ...r, emoji: e.target.value } : r,
+                                ),
+                              }))
+                            }
+                            placeholder="Emoji (ej. 🔥)"
+                            className="w-24 rounded-lg border border-border bg-bg px-3 py-2 text-center text-sm text-slate-200 placeholder:text-slate-400/60 focus:border-cyan focus:outline-none"
+                          />
+                          <input
+                            type="number"
+                            min={0}
+                            value={row.count}
+                            onChange={(e) =>
+                              setForm((f) => ({
+                                ...f,
+                                reactionBoosts: f.reactionBoosts.map((r, ri) =>
+                                  ri === i ? { ...r, count: Number(e.target.value) } : r,
+                                ),
+                              }))
+                            }
+                            placeholder="Cantidad"
+                            className="flex-1 rounded-lg border border-border bg-bg px-3 py-2 text-sm text-slate-200 placeholder:text-slate-400/60 focus:border-cyan focus:outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setForm((f) => ({
+                                ...f,
+                                reactionBoosts: f.reactionBoosts.filter((_, ri) => ri !== i),
+                              }))
+                            }
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-slate-400 hover:text-red-400"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setForm((f) => ({
+                            ...f,
+                            reactionBoosts: [...f.reactionBoosts, { emoji: '', count: 0 }],
+                          }))
+                        }
+                        className="flex items-center justify-center gap-1.5 self-start rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-slate-400 hover:text-slate-200"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        Agregar reacción
+                      </button>
+                    </div>
+                    <p className="mt-1 text-[11px] text-slate-400/70">
+                      Se suman a las reacciones reales de los visitantes. Puedes usar cualquier
+                      emoji, no solo los del selector público.
                     </p>
                   </div>
 

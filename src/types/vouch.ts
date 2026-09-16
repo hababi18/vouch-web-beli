@@ -18,9 +18,10 @@ export const REACTION_EMOJIS = [
   '💰',
 ] as const;
 
-export type ReactionEmoji = (typeof REACTION_EMOJIS)[number];
+/** A reaction emoji. Admins can add custom ones beyond REACTION_EMOJIS. */
+export type ReactionEmoji = string;
 
-export type ReactionCounts = Partial<Record<ReactionEmoji, number>>;
+export type ReactionCounts = Record<string, number>;
 
 export interface VouchItem {
   id: string;
@@ -37,10 +38,12 @@ export interface VouchItem {
   createdAt: string; // ISO date string
   published: boolean;
   pinned: boolean;
-  /** Aggregated counts from every visitor, as reported by the API. */
+  /** Aggregated counts from every visitor plus any admin boosts, as reported by the API. */
   reactions: ReactionCounts;
   /** Emojis this browser's visitor has already reacted with. */
   myReactions: ReactionEmoji[];
+  /** Admin-set fake/starting counts, before real visitor reactions are added in. */
+  reactionBoosts: ReactionCounts;
 }
 
 /** Shape accepted by the API for creating/updating a vouch. */
@@ -59,6 +62,8 @@ export interface VouchInput {
   pinned?: boolean;
   /** ISO date string. Omit to use the current date/time. */
   createdAt?: string;
+  /** Admin-set fake/starting reaction counts, keyed by emoji. */
+  reactionBoosts?: ReactionCounts;
 }
 
 export interface HubConfig {
