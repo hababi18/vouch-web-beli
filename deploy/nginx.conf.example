@@ -19,8 +19,9 @@ server {
     listen [::]:80;
     server_name your-domain.com;
 
-    # Path to the WEB repo's build output (npm run build -> dist/)
-    root /var/www/vouch-web/dist;
+    # Contents of the WEB repo's build output (npm run build -> dist/*,
+    # copied flat into this directory — see the README's deploy steps).
+    root /var/www/vouch-web;
     index index.html;
 
     # Uploaded media / requests can be sizeable — raise the default limit
